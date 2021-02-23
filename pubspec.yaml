@@ -9,7 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  flutter_bloc: ^6.1.0
+  camera:
+  path_provider:
+  path:
 
   cupertino_icons: ^1.0.0
 
