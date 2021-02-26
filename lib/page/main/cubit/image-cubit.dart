@@ -1,9 +1,9 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_camera_crop/cubit/base-cubit.dart';
 
 
-class CameraImageCubit extends Cubit<String> {
+class CameraImageCubit extends BaseCubit<String> {
   CameraImageCubit() : super(null);
 
-  void setImagePath(String imagePath) => emit(imagePath);
-  String getImagePath() => state;
+  set imagePath(String path) => super.value = path;
+  get imagePath => super.value;
 }
