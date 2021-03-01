@@ -5,10 +5,6 @@ import 'package:flutter/material.dart';
 
 class ImageCropWidgetViewModel {
 
-  ImageCropWidgetViewModel(int angle) {
-    _quarterTurns = angle ~/ 90;
-  }
-
   final GlobalKey _cropAreaKey = GlobalKey();
   final GlobalKey _imageContainerKey = GlobalKey();
   
@@ -19,8 +15,6 @@ class ImageCropWidgetViewModel {
   final double cropEdgeBorderWidth = 4;
   final double cropHandleSize = 60;
 
-  int _quarterTurns;
-  
   Offset getCalcPadding({
     double px,
     double py,
@@ -35,23 +29,19 @@ class ImageCropWidgetViewModel {
     if (cropSize.width - dragDx < cropMinimumSize) {
       paddingX = max(imageSize.width - offsetX - cropMinimumSize, 0);
     } else {
-      paddingX = max(px + dragDx * 2, 0);
+      paddingX = max(px + dragDx, 0);
     }
 
     if (cropSize.height - dragDy < cropMinimumSize) {
       paddingY = max(imageSize.height - offsetY - cropMinimumSize, 0);
     } else {
-      paddingY = max(py + dragDy * 2, 0);
+      paddingY = max(py + dragDy, 0);
     }
 
     return Offset(paddingX, paddingY);
   }
   
-  rotateImageWidget({EdgeInsets insets: const EdgeInsets.all(30)}) async {
-    // rotate image
-  }
-
-  int get quarterTurns => _quarterTurns;
+  double rotateImageWidget(double quarterTurns) => quarterTurns + 90 > 360 ? 0 : quarterTurns + 90;
 
   GlobalKey get cropAreaKey => _cropAreaKey;
 

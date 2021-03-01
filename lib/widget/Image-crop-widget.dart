@@ -3,43 +3,78 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_camera_crop/cubit/base-cubit.dart';
+import 'package:flutter_camera_crop/page/crop/cubit/crop-image-cubit.dart';
 import 'package:flutter_camera_crop/widget/image-crop-widget.viewmodel.dart';
 
 
-class ImageCropWidget extends StatelessWidget {
+class ImageCropWidget extends StatefulWidget {
 
-  ImageCropWidget(this.imagePath, {this.angle = 0});
+  const ImageCropWidget(this.imagePath);
 
   final String imagePath;
-  final int angle;
+
+  @override
+  _ImageCropWidgetState createState() => _ImageCropWidgetState();
+}
+
+class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderStateMixin {
 
   ImageCropWidgetViewModel _viewModel;
+  AnimationController _rotateController;
+  double _rotateValue = 0.0;
+
+  @override
+  void initState() {
+    _viewModel ??= ImageCropWidgetViewModel();
+    _rotateController = AnimationController(
+        duration: const Duration(milliseconds: 700),
+        vsync: this,
+    );
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _rotateController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    _viewModel ??= ImageCropWidgetViewModel(angle);
-
     return BlocBuilder<CropImageCubit, EdgeInsets>(
-        builder: (context, insets) => _buildUI(context, insets)
+        builder: (context, cropModel) => _buildUI(context, cropModel)
     );
   }
 
   Widget _buildUI(BuildContext context, EdgeInsets insets) {
     return Stack(
+      children: [
+        Container(color: Colors.black87),
+        Align(
+          alignment: Alignment.center,
+          child: InteractiveViewer(
+              child: RotationTransition(
+                  turns: Tween(begin: 1.0, end: 0.0).animate(_rotateController),
+                  child: _buildCropPicture(context, insets)
+              )
+          ),
+        ),
+        _buildCropButtons(context),
+      ],
+    );
+  }
+
+  Widget _buildCropPicture(BuildContext context, EdgeInsets insets) {
+    return Stack(
       children: <Widget>[
         Container(
           key: _viewModel.imageContainerKey,
-          color: Colors.black,
-          child: RotatedBox(
-              quarterTurns: _viewModel.quarterTurns,
-              child: Image.file(File(imagePath))
-          ),
+          child: Image.file(File(widget.imagePath))
+          // RotatedBox
         ),
         _buildOverlay(insets),
         _buildCropArea(context, insets),
         _buildHandleArea(context, insets),
-        // _buildCropButtons(),
       ],
     );
   }
@@ -112,7 +147,7 @@ class ImageCropWidget extends StatelessWidget {
                     return;
                   }
 
-                  context.read<CropImageCubit>().value = EdgeInsets.fromLTRB(
+                  context.read<CropImageCubit>().insets = EdgeInsets.fromLTRB(
                     max(insets.left + dx * 2, 0),
                     max(insets.top + dy * 2, 0),
                     max(insets.right - dx * 2, 0),
@@ -286,7 +321,6 @@ class ImageCropWidget extends StatelessWidget {
                     dragDx: drag.delta.dx,
                     dragDy: -drag.delta.dy
                 );
-
                 context.read<CropImageCubit>().insets = insets.copyWith(
                   left: padding.dx,
                   bottom: padding.dy,
@@ -299,14 +333,42 @@ class ImageCropWidget extends StatelessWidget {
     );
   }
 
-  _buildCropButtons() {
-    return Container();
+  _buildCropButtons(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        padding: EdgeInsets.all(15),
+        margin: EdgeInsets.only(
+          bottom: 30
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          color: Colors.black,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _getRotatePictureButton(context),
+          ],
+        ),
+      ),
+    );
   }
-}
 
-class CropImageCubit extends BaseCubit<EdgeInsets> {
-  CropImageCubit({EdgeInsets insets = const EdgeInsets.all(30)}) : super(insets);
-
-  EdgeInsets get insets => super.value;
-  set insets(EdgeInsets value) => super.value = value;
+  _getRotatePictureButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        if((_rotateValue += 0.25) > 1) {
+          _rotateValue = 0.25;
+          _rotateController.reset();
+        }
+        _rotateController.animateTo(_rotateValue);
+      },
+      child: Icon(
+        Icons.crop_rotate, 
+        color: Colors.white,
+      ),
+    );
+  }
 }
