@@ -4,5 +4,5 @@ abstract class BaseCubit<T> extends Cubit<T> {
   BaseCubit(state) : super(state);
 
   set value(T value) => emit(value);
-  get value => this.state;
+  T get value => this.state;
 }
