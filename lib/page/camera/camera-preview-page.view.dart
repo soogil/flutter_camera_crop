@@ -6,8 +6,9 @@ import 'package:flutter_camera_crop/service/camera-service.dart';
 
 class CameraPreviewPageView extends StatelessWidget {
 
-  CameraPreviewPageView() : cameraController =
-      CameraService().cameraController ,initCamera = CameraService().initCamera;
+  CameraPreviewPageView() :
+        cameraController = CameraService().cameraController,
+        initCamera = CameraService().initCamera;
 
   final CameraController cameraController;
   final Future initCamera;
@@ -53,9 +54,6 @@ class CameraPreviewPageView extends StatelessWidget {
             await cameraController.takePicture().then((value) {
               Navigator.pushReplacement(context, MaterialPageRoute(
                   builder: (context) => CropPageView(value.path)));
-              // Navigator.pop(context, {
-              //   'imagePath': value.path
-              // });
             });
           },
           child: Icon(Icons.camera),

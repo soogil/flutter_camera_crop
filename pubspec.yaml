@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_bloc: ^6.1.0
-  camera:
+  camera: ^0.7.0
   path_provider:
   crop_plugin:
     path: ../crop_plugin

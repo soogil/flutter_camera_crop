@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_camera_crop/page/camera/camera-preview-page.view.dart';
-import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
 import 'package:flutter_camera_crop/page/main/cubit/image-cubit.dart';
 
 
@@ -20,14 +19,13 @@ class CameraMainPageView extends StatelessWidget {
 
   _getAppBar() {
     return AppBar(
-      title: Text('Flutter_camera_crop'),
+      title: Text('Flutter camera crop'),
     );
   }
 
   _getBody() {
     return BlocBuilder<CameraImageCubit, Uint8List>(
         builder: (context, state) {
-          print('CameraMainPageView $state');
           if(state == null) {
             return Container();
           } else {

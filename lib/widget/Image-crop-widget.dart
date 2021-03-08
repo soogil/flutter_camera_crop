@@ -1,14 +1,15 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
 import 'package:flutter_camera_crop/widget/image-crop-widget.viewmodel.dart';
 
 
 class ImageCropWidget extends StatefulWidget {
-
   const ImageCropWidget({@required this.imageBytes});
 
   final Uint8List imageBytes;
@@ -20,24 +21,18 @@ class ImageCropWidget extends StatefulWidget {
 class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderStateMixin {
 
   ImageCropWidgetViewModel _viewModel;
-  AnimationController _rotateController;
-  double _rotateValue = 0.0;
+  // AnimationController _rotateController;
 
   @override
   void initState() {
+    WidgetsBinding.instance.addPostFrameCallback(_afterLayout);
     _viewModel ??= ImageCropWidgetViewModel();
     context.read<CropImageCubit>().setModel(imageByte: widget.imageBytes);
-    _rotateController = AnimationController(
-        duration: const Duration(milliseconds: 700),
-        vsync: this,
-    );
+    // _rotateController = AnimationController(
+    //     duration: const Duration(milliseconds: 700),
+    //     vsync: this,
+    // );
     super.initState();
-  }
-
-  @override
-  void dispose() {
-    _rotateController.dispose();
-    super.dispose();
   }
 
   @override
@@ -61,9 +56,9 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
         return Align(
           alignment: Alignment.center,
           child: InteractiveViewer(
-              child: RotationTransition(
-                  turns: Tween(begin: 1.0, end: 0.0).animate(_rotateController),
-                  child: _buildCropPicture(context, model.insets)
+              child: RotatedBox(
+                  quarterTurns: model.quarterTurns,
+                  child: _buildCrop(context, model.insets)
               )
           ),
         );
@@ -71,13 +66,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
     );
   }
 
-  Widget _buildCropPicture(BuildContext context, EdgeInsets insets) {
+  Widget _buildCrop(BuildContext context, EdgeInsets insets) {
     return Stack(
       children: <Widget>[
         Container(
           key: _viewModel.imageContainerKey,
-          child: Image.memory(widget.imageBytes)
-          // RotatedBox
+          child: Image.memory(widget.imageBytes),
         ),
         _buildOverlay(insets),
         _buildCropArea(context, insets),
@@ -161,7 +155,8 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                       max(insets.right - dx * 2, 0),
                       max(insets.bottom - dy * 2, 0),
                     ),
-                    size: _viewModel.cropSize
+                    cropSize: _viewModel.cropSize,
+                    imageSize: _viewModel.imageSize,
                   );
                 },
               ),
@@ -255,11 +250,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                 );
 
                 context.read<CropImageCubit>().setModel(
-                    insets: insets.copyWith(
-                      left: padding.dx,
-                      top: padding.dy,
-                    ),
-                    size: _viewModel.cropSize
+                  insets: insets.copyWith(
+                    left: padding.dx,
+                    top: padding.dy,
+                  ),
+                  cropSize: _viewModel.cropSize,
+                  imageSize: _viewModel.imageSize,
                 );
               },
             ),
@@ -284,11 +280,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                 );
 
                 context.read<CropImageCubit>().setModel(
-                    insets: insets.copyWith(
-                      right: padding.dx,
-                      top: padding.dy,
-                    ),
-                    size: _viewModel.cropSize
+                  insets: insets.copyWith(
+                    right: padding.dx,
+                    top: padding.dy,
+                  ),
+                  cropSize: _viewModel.cropSize,
+                  imageSize: _viewModel.imageSize,
                 );
               },
             ),
@@ -313,11 +310,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                 );
 
                 context.read<CropImageCubit>().setModel(
-                    insets: insets.copyWith(
-                      right: padding.dx,
-                      bottom: padding.dy,
-                    ),
-                    size: _viewModel.cropSize
+                  insets: insets.copyWith(
+                    right: padding.dx,
+                    bottom: padding.dy,
+                  ),
+                  cropSize: _viewModel.cropSize,
+                  imageSize: _viewModel.imageSize,
                 );
               },
             ),
@@ -342,11 +340,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                 );
 
                 context.read<CropImageCubit>().setModel(
-                    insets: insets.copyWith(
-                      left: padding.dx,
-                      bottom: padding.dy,
-                    ),
-                    size: _viewModel.cropSize
+                  insets: insets.copyWith(
+                    left: padding.dx,
+                    bottom: padding.dy,
+                  ),
+                  cropSize: _viewModel.cropSize,
+                  imageSize: _viewModel.imageSize,
                 );
               },
             ),
@@ -382,16 +381,34 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
   _getRotatePictureButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if((_rotateValue += 0.25) > 1) {
-          _rotateValue = 0.25;
-          _rotateController.reset();
-        }
-        _rotateController.animateTo(_rotateValue);
+        context.read<CropImageCubit>().setModel(
+          quarterTurns: context.read<CropImageCubit>().quarterTurns + 1
+        );
       },
-      child: Icon(
-        Icons.crop_rotate, 
-        color: Colors.white,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle
+        ),
+        child: Icon(
+          Icons.crop_rotate,
+          color: Colors.white,
+        ),
       ),
     );
+  }
+
+  //todo addPostFrameCallback으로 image Size 초기화 해주려고했는데 딜레이를 안주니 Size가 0으로 나옴
+  _afterLayout(Duration duration) {
+    Future.delayed(Duration(milliseconds: 30)).then((_) {
+      final RenderBox cropBox = _viewModel.cropAreaKey.currentContext.findRenderObject();
+      final RenderBox imageBox = _viewModel.imageContainerKey.currentContext.findRenderObject();
+
+      context.read<CropImageCubit>().setModel(
+          imageSize: imageBox.size,
+          cropSize: cropBox.size
+      );
+    });
   }
 }

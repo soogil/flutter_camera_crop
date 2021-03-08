@@ -7,7 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
 import 'package:flutter_camera_crop/page/main/cubit/image-cubit.dart';
 import 'package:flutter_camera_crop/widget/Image-crop-widget.dart';
-import 'package:path/path.dart';
 
 
 class CropPageView extends StatelessWidget {
@@ -27,7 +26,7 @@ class CropPageView extends StatelessWidget {
   _getAppBar(BuildContext context) {
     return AppBar(
       title: Text(
-        'cropPage',
+        'Crop page',
       ),
       actions: [
         _getCompleteButton(context),
@@ -39,13 +38,14 @@ class CropPageView extends StatelessWidget {
     return FlatButton(
         onPressed: () async {
           final model = context.read<CropImageCubit>().value;
-          print('_getCompleteButton ${model.toString()}');
+
+          print(model.angle);
           final cropImageByte = await CropPlugin.cropImage(
             bytes: model.imageBytes,
-            rawSize: model.size,
+            rawSize: model.imageSize,
             area: model.rect,
             scale: 0.1,
-            angle: 0,
+            angle: model.angle,
           );
           context.read<CameraImageCubit>().imageBytes = cropImageByte;
           Navigator.pop(context);

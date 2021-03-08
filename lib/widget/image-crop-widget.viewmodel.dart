@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 
 class ImageCropWidgetViewModel {
-
   final GlobalKey _cropAreaKey = GlobalKey();
   final GlobalKey _imageContainerKey = GlobalKey();
 
@@ -39,14 +38,9 @@ class ImageCropWidgetViewModel {
       paddingY = max(py + dragDy * 2, 0);
     }
 
+    print('$cropSize $imageSize');
     return Offset(paddingX, paddingY);
   }
-
-  // CropImageModel getCropBaseData() {
-  //   return CropImageModel(
-  //       imageSize, _viewModel.insets.left, _viewModel.insets.top, cropSize.width,
-  //       cropSize.height, _quarterTurns);
-  // }
 
   GlobalKey get cropAreaKey => _cropAreaKey;
 
@@ -59,19 +53,19 @@ class ImageCropWidgetViewModel {
 
 class CropImageModel {
   CropImageModel({
+    this.imageSize,
     this.imageBytes,
     this.insets = const EdgeInsets.all(20),
-    this.size,
+    this.cropSize,
     this.quarterTurns = 0,
   });
 
   Uint8List imageBytes;
   int quarterTurns;
   EdgeInsets insets;
-  Size size;
+  Size imageSize;
+  Size cropSize;
 
-  @override
-  String toString() => '$insets $size $quarterTurns $imageBytes';
-  Rect get rect => Rect.fromLTWH(insets.left, insets.top, size.width, size.height);
+  Rect get rect => Rect.fromLTWH(insets.left, insets.top, cropSize.width, cropSize.height);
   int get angle => quarterTurns * 90;
 }
