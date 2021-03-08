@@ -1,8 +1,9 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_camera_crop/page/camera/camera-preview-page.view.dart';
+import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
 import 'package:flutter_camera_crop/page/main/cubit/image-cubit.dart';
 
 
@@ -24,12 +25,13 @@ class CameraMainPageView extends StatelessWidget {
   }
 
   _getBody() {
-    return BlocBuilder<CameraImageCubit, String>(
+    return BlocBuilder<CameraImageCubit, Uint8List>(
         builder: (context, state) {
+          print('CameraMainPageView $state');
           if(state == null) {
             return Container();
           } else {
-            return Center(child: Image.file(File(state)));
+            return Center(child: Image.memory(state));
           }
         }
     );
@@ -42,9 +44,9 @@ class CameraMainPageView extends StatelessWidget {
 
           if (data == null) return;
 
-          final path = data['imagePath'];
+          final imageBytes = data['imageBytes'];
 
-          context.read<CameraImageCubit>().imagePath = path;
+          context.read<CameraImageCubit>().imageBytes = imageBytes;
         },
       child: Icon(Icons.camera_alt_outlined),
     );

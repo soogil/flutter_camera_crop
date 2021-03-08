@@ -1,17 +1,17 @@
-import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_camera_crop/page/crop/cubit/crop-image-cubit.dart';
+import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
 import 'package:flutter_camera_crop/widget/image-crop-widget.viewmodel.dart';
 
 
 class ImageCropWidget extends StatefulWidget {
 
-  const ImageCropWidget(this.imagePath);
+  const ImageCropWidget({@required this.imageBytes});
 
-  final String imagePath;
+  final Uint8List imageBytes;
 
   @override
   _ImageCropWidgetState createState() => _ImageCropWidgetState();
@@ -26,6 +26,7 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
   @override
   void initState() {
     _viewModel ??= ImageCropWidgetViewModel();
+    context.read<CropImageCubit>().setModel(imageByte: widget.imageBytes);
     _rotateController = AnimationController(
         duration: const Duration(milliseconds: 700),
         vsync: this,
@@ -41,26 +42,32 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<CropImageCubit, EdgeInsets>(
-        builder: (context, cropModel) => _buildUI(context, cropModel)
-    );
+    return _buildUI(context);
   }
 
-  Widget _buildUI(BuildContext context, EdgeInsets insets) {
+  Widget _buildUI(BuildContext context) {
     return Stack(
       children: [
         Container(color: Colors.black87),
-        Align(
+        _buildCropView(),
+        _buildCropButtons(context),
+      ],
+    );
+  }
+
+  _buildCropView() {
+    return BlocBuilder<CropImageCubit, CropImageModel>(
+      builder: (_, model) {
+        return Align(
           alignment: Alignment.center,
           child: InteractiveViewer(
               child: RotationTransition(
                   turns: Tween(begin: 1.0, end: 0.0).animate(_rotateController),
-                  child: _buildCropPicture(context, insets)
+                  child: _buildCropPicture(context, model.insets)
               )
           ),
-        ),
-        _buildCropButtons(context),
-      ],
+        );
+      },
     );
   }
 
@@ -69,7 +76,7 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
       children: <Widget>[
         Container(
           key: _viewModel.imageContainerKey,
-          child: Image.file(File(widget.imagePath))
+          child: Image.memory(widget.imageBytes)
           // RotatedBox
         ),
         _buildOverlay(insets),
@@ -147,11 +154,14 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     return;
                   }
 
-                  context.read<CropImageCubit>().insets = EdgeInsets.fromLTRB(
-                    max(insets.left + dx * 2, 0),
-                    max(insets.top + dy * 2, 0),
-                    max(insets.right - dx * 2, 0),
-                    max(insets.bottom - dy * 2, 0),
+                  context.read<CropImageCubit>().setModel(
+                    insets: EdgeInsets.fromLTRB(
+                      max(insets.left + dx * 2, 0),
+                      max(insets.top + dy * 2, 0),
+                      max(insets.right - dx * 2, 0),
+                      max(insets.bottom - dy * 2, 0),
+                    ),
+                    size: _viewModel.cropSize
                   );
                 },
               ),
@@ -244,9 +254,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().insets = insets.copyWith(
-                  left: padding.dx,
-                  top: padding.dy,
+                context.read<CropImageCubit>().setModel(
+                    insets: insets.copyWith(
+                      left: padding.dx,
+                      top: padding.dy,
+                    ),
+                    size: _viewModel.cropSize
                 );
               },
             ),
@@ -270,9 +283,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().insets = insets.copyWith(
-                  right: padding.dx,
-                  top: padding.dy,
+                context.read<CropImageCubit>().setModel(
+                    insets: insets.copyWith(
+                      right: padding.dx,
+                      top: padding.dy,
+                    ),
+                    size: _viewModel.cropSize
                 );
               },
             ),
@@ -296,9 +312,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: -drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().insets = insets.copyWith(
-                  right: padding.dx,
-                  bottom: padding.dy,
+                context.read<CropImageCubit>().setModel(
+                    insets: insets.copyWith(
+                      right: padding.dx,
+                      bottom: padding.dy,
+                    ),
+                    size: _viewModel.cropSize
                 );
               },
             ),
@@ -321,9 +340,13 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDx: drag.delta.dx,
                     dragDy: -drag.delta.dy
                 );
-                context.read<CropImageCubit>().insets = insets.copyWith(
-                  left: padding.dx,
-                  bottom: padding.dy,
+
+                context.read<CropImageCubit>().setModel(
+                    insets: insets.copyWith(
+                      left: padding.dx,
+                      bottom: padding.dy,
+                    ),
+                    size: _viewModel.cropSize
                 );
               },
             ),

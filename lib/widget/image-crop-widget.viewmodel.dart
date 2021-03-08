@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,7 @@ class ImageCropWidgetViewModel {
 
   final GlobalKey _cropAreaKey = GlobalKey();
   final GlobalKey _imageContainerKey = GlobalKey();
-  
+
   final Color cropEdgeColor = const Color.fromRGBO(255, 255, 255, 0.7);
   final Color cropEdgeHandleColor = Colors.transparent;
   final double cropMinimumSize = 150;
@@ -21,7 +22,7 @@ class ImageCropWidgetViewModel {
     double offsetX,
     double offsetY,
     double dragDx,
-    double dragDy
+    double dragDy,
   }) {
     double paddingX = 0.0;
     double paddingY = 0.0;
@@ -29,19 +30,23 @@ class ImageCropWidgetViewModel {
     if (cropSize.width - dragDx < cropMinimumSize) {
       paddingX = max(imageSize.width - offsetX - cropMinimumSize, 0);
     } else {
-      paddingX = max(px + dragDx, 0);
+      paddingX = max(px + dragDx * 2, 0);
     }
 
     if (cropSize.height - dragDy < cropMinimumSize) {
       paddingY = max(imageSize.height - offsetY - cropMinimumSize, 0);
     } else {
-      paddingY = max(py + dragDy, 0);
+      paddingY = max(py + dragDy * 2, 0);
     }
 
     return Offset(paddingX, paddingY);
   }
-  
-  double rotateImageWidget(double quarterTurns) => quarterTurns + 90 > 360 ? 0 : quarterTurns + 90;
+
+  // CropImageModel getCropBaseData() {
+  //   return CropImageModel(
+  //       imageSize, _viewModel.insets.left, _viewModel.insets.top, cropSize.width,
+  //       cropSize.height, _quarterTurns);
+  // }
 
   GlobalKey get cropAreaKey => _cropAreaKey;
 
@@ -50,4 +55,23 @@ class ImageCropWidgetViewModel {
   Size get cropSize => _cropAreaKey.currentContext.size;
   
   Size get imageSize => _imageContainerKey.currentContext.size;
+}
+
+class CropImageModel {
+  CropImageModel({
+    this.imageBytes,
+    this.insets = const EdgeInsets.all(20),
+    this.size,
+    this.quarterTurns = 0,
+  });
+
+  Uint8List imageBytes;
+  int quarterTurns;
+  EdgeInsets insets;
+  Size size;
+
+  @override
+  String toString() => '$insets $size $quarterTurns $imageBytes';
+  Rect get rect => Rect.fromLTWH(insets.left, insets.top, size.width, size.height);
+  int get angle => quarterTurns * 90;
 }

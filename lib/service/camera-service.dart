@@ -14,7 +14,6 @@ class CameraService {
     _cameraController = CameraController(_cameras.first, ResolutionPreset.medium);
 
     _initCamera = _cameraController.initialize();
-    print('camera init');
   }
 
   List<CameraDescription> _cameras;

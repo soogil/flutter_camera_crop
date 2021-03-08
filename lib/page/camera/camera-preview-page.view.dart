@@ -6,13 +6,11 @@ import 'package:flutter_camera_crop/service/camera-service.dart';
 
 class CameraPreviewPageView extends StatelessWidget {
 
-  CameraPreviewPageView() {
-    _cameraController = CameraService().cameraController;
-    _initCamera = CameraService().initCamera;
-  }
+  CameraPreviewPageView() : cameraController =
+      CameraService().cameraController ,initCamera = CameraService().initCamera;
 
-  CameraController _cameraController;
-  Future _initCamera;
+  final CameraController cameraController;
+  final Future initCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +31,10 @@ class CameraPreviewPageView extends StatelessWidget {
 
   _getCameraView() {
     return FutureBuilder(
-        future: _initCamera,
+        future: initCamera,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
-            return CameraPreview(_cameraController);
+            return CameraPreview(cameraController);
           } else {
             return CircularProgressIndicator();
           }
@@ -52,8 +50,8 @@ class CameraPreviewPageView extends StatelessWidget {
         ),
         child: FloatingActionButton(
           onPressed: () async {
-            await _cameraController.takePicture().then((value) {
-              Navigator.push(context, MaterialPageRoute(
+            await cameraController.takePicture().then((value) {
+              Navigator.pushReplacement(context, MaterialPageRoute(
                   builder: (context) => CropPageView(value.path)));
               // Navigator.pop(context, {
               //   'imagePath': value.path
