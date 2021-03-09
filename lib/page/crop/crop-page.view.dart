@@ -39,7 +39,7 @@ class CropPageView extends StatelessWidget {
         onPressed: () async {
           final model = context.read<CropImageCubit>().value;
 
-          print(model.angle);
+          print('_getCompleteButton ${model.angle}');
           final cropImageByte = await CropPlugin.cropImage(
             bytes: model.imageBytes,
             rawSize: model.imageSize,

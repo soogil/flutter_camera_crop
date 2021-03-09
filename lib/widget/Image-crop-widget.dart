@@ -3,10 +3,12 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
 import 'package:flutter_camera_crop/widget/image-crop-widget.viewmodel.dart';
+import 'package:flutter_camera_crop/widget/scale-box-widget.dart';
 
 
 class ImageCropWidget extends StatefulWidget {
@@ -21,17 +23,19 @@ class ImageCropWidget extends StatefulWidget {
 class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderStateMixin {
 
   ImageCropWidgetViewModel _viewModel;
-  // AnimationController _rotateController;
+  AnimationController _rotateController;
+  double _rotateAnimationValue = 0;
+  bool _isVertical = false;
 
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback(_afterLayout);
     _viewModel ??= ImageCropWidgetViewModel();
-    context.read<CropImageCubit>().setModel(imageByte: widget.imageBytes);
-    // _rotateController = AnimationController(
-    //     duration: const Duration(milliseconds: 700),
-    //     vsync: this,
-    // );
+    context.read<CropImageCubit>().setModel(imageByte: widget.imageBytes, quarterTurns: 1);
+    _rotateController = AnimationController(
+        duration: const Duration(milliseconds: 700),
+        vsync: this,
+    );
     super.initState();
   }
 
@@ -56,9 +60,12 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
         return Align(
           alignment: Alignment.center,
           child: InteractiveViewer(
-              child: RotatedBox(
-                  quarterTurns: model.quarterTurns,
-                  child: _buildCrop(context, model.insets)
+              child: RotationTransition(
+                turns: Tween(begin: 1.0, end: 0.0).animate(_rotateController),
+                child: ScaleBox(
+                  isVertical: _isVertical,
+                    child: _buildCrop(context, model.insets)
+                ),
               )
           ),
         );
@@ -381,8 +388,14 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
   _getRotatePictureButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        _isVertical = !_isVertical;
+        if((_rotateAnimationValue += 0.25) > 1) {
+          _rotateAnimationValue = 0.25;
+          _rotateController.reset();
+        }
+        _rotateController.animateTo(_rotateAnimationValue);
         context.read<CropImageCubit>().setModel(
-          quarterTurns: context.read<CropImageCubit>().quarterTurns + 1
+          quarterTurns: context.read<CropImageCubit>().quarterTurns - 1
         );
       },
       child: Container(
