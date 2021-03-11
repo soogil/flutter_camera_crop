@@ -25,7 +25,7 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
   ImageCropWidgetViewModel _viewModel;
   AnimationController _rotateController;
   double _rotateAnimationValue = 0;
-  bool _isVertical = false;
+  bool _isVertical = true;
 
   @override
   void initState() {
