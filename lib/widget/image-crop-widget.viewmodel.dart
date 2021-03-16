@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 
 class ImageCropWidgetViewModel {
+  ImageCropWidgetViewModel() : quarterTurns = 0;
   final GlobalKey _cropAreaKey = GlobalKey();
   final GlobalKey _imageContainerKey = GlobalKey();
 
@@ -14,6 +15,8 @@ class ImageCropWidgetViewModel {
   final double cropEdgeSize = 28;
   final double cropEdgeBorderWidth = 4;
   final double cropHandleSize = 60;
+
+  int quarterTurns;
 
   Offset getCalcPadding({
     double px,
@@ -25,30 +28,39 @@ class ImageCropWidgetViewModel {
   }) {
     double paddingX = 0.0;
     double paddingY = 0.0;
+    final cropSize = getCropSize();
+    final imageSize = getImageSize();
 
     if (cropSize.width - dragDx < cropMinimumSize) {
       paddingX = max(imageSize.width - offsetX - cropMinimumSize, 0);
     } else {
-      paddingX = max(px + dragDx * 2, 0);
+      paddingX = max(px + dragDx, 0);
     }
 
     if (cropSize.height - dragDy < cropMinimumSize) {
       paddingY = max(imageSize.height - offsetY - cropMinimumSize, 0);
     } else {
-      paddingY = max(py + dragDy * 2, 0);
+      paddingY = max(py + dragDy, 0);
     }
-
-    print('$cropSize $imageSize');
     return Offset(paddingX, paddingY);
   }
+
+  bool get isHorizontal => quarterTurns % 2 == 1;
 
   GlobalKey get cropAreaKey => _cropAreaKey;
 
   GlobalKey get imageContainerKey => _imageContainerKey;
 
-  Size get cropSize => _cropAreaKey.currentContext.size;
-  
-  Size get imageSize => _imageContainerKey.currentContext.size;
+  Size get originCropSize => _cropAreaKey.currentContext.size;
+
+  Size getCropSize() =>_cropAreaKey.currentContext.size;
+
+  Size get originImageSize => _imageContainerKey.currentContext.size;
+
+  Size getImageSize() => Size(
+    isHorizontal ? originImageSize.height : originImageSize.width,
+    isHorizontal ? originImageSize.width : originImageSize.height,
+  );
 }
 
 class CropImageModel {
@@ -66,6 +78,12 @@ class CropImageModel {
   Size imageSize;
   Size cropSize;
 
-  Rect get rect => Rect.fromLTWH(insets.left, insets.top, cropSize.width, cropSize.height);
-  int get angle => quarterTurns * 90;
+  Rect get rect => Rect.fromLTWH(
+      insets.left,
+      insets.top,
+      cropSize.width,
+      cropSize.height
+  );
+  bool get horizontal => quarterTurns % 2 == 1;
+  int get angle => quarterTurns * 90 + 90;
 }

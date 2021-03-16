@@ -6,9 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
+import 'package:flutter_camera_crop/page/crop/cubit/crop-image-cubit.dart';
 import 'package:flutter_camera_crop/widget/image-crop-widget.viewmodel.dart';
-import 'package:flutter_camera_crop/widget/scale-box-widget.dart';
 
 
 class ImageCropWidget extends StatefulWidget {
@@ -23,28 +22,28 @@ class ImageCropWidget extends StatefulWidget {
 class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderStateMixin {
 
   ImageCropWidgetViewModel _viewModel;
-  AnimationController _rotateController;
-  double _rotateAnimationValue = 0;
+  // AnimationController _rotateController;
+  // double _rotateAnimationValue = 0;
   bool _isVertical = true;
 
   @override
   void initState() {
     WidgetsBinding.instance.addPostFrameCallback(_afterLayout);
     _viewModel ??= ImageCropWidgetViewModel();
-    context.read<CropImageCubit>().setModel(imageByte: widget.imageBytes, quarterTurns: 1);
-    _rotateController = AnimationController(
-        duration: const Duration(milliseconds: 700),
-        vsync: this,
+    context.read<CropImageCubit>().setCropImage(
+        imageByte: widget.imageBytes,
+        quarterTurns: _viewModel.quarterTurns,
+        insets: EdgeInsets.all(20)
     );
+    // _rotateController = AnimationController(
+    //   duration: const Duration(milliseconds: 700),
+    //   vsync: this,
+    // );
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return _buildUI(context);
-  }
-
-  Widget _buildUI(BuildContext context) {
     return Stack(
       children: [
         Container(color: Colors.black87),
@@ -59,30 +58,25 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
       builder: (_, model) {
         return Align(
           alignment: Alignment.center,
-          child: InteractiveViewer(
-              child: RotationTransition(
-                turns: Tween(begin: 1.0, end: 0.0).animate(_rotateController),
-                child: ScaleBox(
-                  isVertical: _isVertical,
-                    child: _buildCrop(context, model.insets)
-                ),
-              )
-          ),
+          child: _buildCrop(context, model),
         );
       },
     );
   }
 
-  Widget _buildCrop(BuildContext context, EdgeInsets insets) {
+  Widget _buildCrop(BuildContext context, CropImageModel model) {
     return Stack(
       children: <Widget>[
-        Container(
-          key: _viewModel.imageContainerKey,
-          child: Image.memory(widget.imageBytes),
+        RotatedBox(
+          quarterTurns: model.quarterTurns,
+          child: Container(
+            key: _viewModel.imageContainerKey,
+            child: Image.memory(widget.imageBytes),
+          ),
         ),
-        _buildOverlay(insets),
-        _buildCropArea(context, insets),
-        _buildHandleArea(context, insets),
+        _buildOverlay(model.insets),
+        _buildCropArea(context, model.insets),
+        // _buildHandleArea(context, insets),
       ],
     );
   }
@@ -137,17 +131,21 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                       border: Border.all(color: cropEdgeColor)
                   ),
                 ),
-                onPanUpdate: (drag) {
-                  double dx = drag.delta.dx;
-                  double dy = drag.delta.dy;
+                onPanUpdate: (detail) {
+                  double dx = detail.delta.dx;
+                  double dy = detail.delta.dy;
 
-                  if ((insets.left == 0 && drag.delta.dx < 0)
-                      || (insets.right == 0 && drag.delta.dx > 0)) {
+                  if ((insets.left == 0 && dx < 0)
+                      || (insets.right == 0 && dx > 0)
+                      || (insets.left + dx < 0)
+                      || (insets.right - dx < 0)) {
                     dx = 0;
                   }
 
-                  if ((insets.top == 0 && drag.delta.dy < 0)
-                      || (insets.bottom == 0 && drag.delta.dy > 0)) {
+                  if ((insets.top == 0 && dy < 0)
+                      || (insets.bottom == 0 && dy > 0)
+                      || (insets.top + dy < 0)
+                      || (insets.bottom - dy < 0)) {
                     dy = 0;
                   }
 
@@ -155,15 +153,15 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     return;
                   }
 
-                  context.read<CropImageCubit>().setModel(
+                  context.read<CropImageCubit>().setCropImage(
                     insets: EdgeInsets.fromLTRB(
-                      max(insets.left + dx * 2, 0),
-                      max(insets.top + dy * 2, 0),
-                      max(insets.right - dx * 2, 0),
-                      max(insets.bottom - dy * 2, 0),
+                      max(insets.left + dx, 0),
+                      max(insets.top + dy, 0),
+                      max(insets.right - dx, 0),
+                      max(insets.bottom - dy, 0),
                     ),
-                    cropSize: _viewModel.cropSize,
-                    imageSize: _viewModel.imageSize,
+                    cropSize: _viewModel.getCropSize(),
+                    imageSize: _viewModel.getImageSize(),
                   );
                 },
               ),
@@ -171,13 +169,34 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
             Positioned(
               left: 0,
               top: 0,
-              child: Container(
-                width: cropEdgeSize,
-                height: cropEdgeSize,
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: borderSide,
-                    top: borderSide,
+              child: GestureDetector(
+                onPanUpdate: (drag) {
+                  final padding = _viewModel.getCalcPadding(
+                      px: insets.left,
+                      py: insets.top,
+                      offsetX: insets.right,
+                      offsetY: insets.bottom,
+                      dragDx: drag.delta.dx,
+                      dragDy: drag.delta.dy
+                  );
+
+                  context.read<CropImageCubit>().setCropImage(
+                    insets: insets.copyWith(
+                      left: padding.dx,
+                      top: padding.dy,
+                    ),
+                    cropSize: _viewModel.getCropSize(),
+                    imageSize: _viewModel.getImageSize(),
+                  );
+                },
+                child: Container(
+                  width: cropEdgeSize,
+                  height: cropEdgeSize,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: borderSide,
+                      top: borderSide,
+                    ),
                   ),
                 ),
               ),
@@ -185,13 +204,34 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
             Positioned(
               top: 0,
               right: 0,
-              child: Container(
-                width: cropEdgeSize,
-                height: cropEdgeSize,
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: borderSide,
-                    top: borderSide,
+              child: GestureDetector(
+                onPanUpdate: (drag) {
+                  final padding = _viewModel.getCalcPadding(
+                      px: insets.right,
+                      py: insets.top,
+                      offsetX: insets.left,
+                      offsetY: insets.bottom,
+                      dragDx: -drag.delta.dx,
+                      dragDy: drag.delta.dy
+                  );
+
+                  context.read<CropImageCubit>().setCropImage(
+                    insets: insets.copyWith(
+                      right: padding.dx,
+                      top: padding.dy,
+                    ),
+                    cropSize: _viewModel.getCropSize(),
+                    imageSize: _viewModel.getImageSize(),
+                  );
+                },
+                child: Container(
+                  width: cropEdgeSize,
+                  height: cropEdgeSize,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: borderSide,
+                      top: borderSide,
+                    ),
                   ),
                 ),
               ),
@@ -199,13 +239,34 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
             Positioned(
               right: 0,
               bottom: 0,
-              child: Container(
-                width: cropEdgeSize,
-                height: cropEdgeSize,
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: borderSide,
-                    bottom: borderSide,
+              child: GestureDetector(
+                onPanUpdate: (drag) {
+                  final padding = _viewModel.getCalcPadding(
+                      px: insets.right,
+                      py: insets.bottom,
+                      offsetX: insets.left,
+                      offsetY: insets.top,
+                      dragDx: -drag.delta.dx,
+                      dragDy: -drag.delta.dy
+                  );
+
+                  context.read<CropImageCubit>().setCropImage(
+                    insets: insets.copyWith(
+                      right: padding.dx,
+                      bottom: padding.dy,
+                    ),
+                    cropSize: _viewModel.getCropSize(),
+                    imageSize: _viewModel.getImageSize(),
+                  );
+                },
+                child: Container(
+                  width: cropEdgeSize,
+                  height: cropEdgeSize,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: borderSide,
+                      bottom: borderSide,
+                    ),
                   ),
                 ),
               ),
@@ -213,13 +274,34 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
             Positioned(
               left: 0,
               bottom: 0,
-              child: Container(
-                width: cropEdgeSize,
-                height: cropEdgeSize,
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: borderSide,
-                    bottom: borderSide,
+              child: GestureDetector(
+                onPanUpdate: (drag) {
+                  final padding = _viewModel.getCalcPadding(
+                      px: insets.left,
+                      py: insets.bottom,
+                      offsetX: insets.right,
+                      offsetY: insets.top,
+                      dragDx: drag.delta.dx,
+                      dragDy: -drag.delta.dy
+                  );
+
+                  context.read<CropImageCubit>().setCropImage(
+                    insets: insets.copyWith(
+                      left: padding.dx,
+                      bottom: padding.dy,
+                    ),
+                    cropSize: _viewModel.getCropSize(),
+                    imageSize: _viewModel.getImageSize(),
+                  );
+                },
+                child: Container(
+                  width: cropEdgeSize,
+                  height: cropEdgeSize,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: borderSide,
+                      bottom: borderSide,
+                    ),
                   ),
                 ),
               ),
@@ -256,13 +338,13 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().setModel(
+                context.read<CropImageCubit>().setCropImage(
                   insets: insets.copyWith(
                     left: padding.dx,
                     top: padding.dy,
                   ),
-                  cropSize: _viewModel.cropSize,
-                  imageSize: _viewModel.imageSize,
+                  cropSize: _viewModel.getCropSize(),
+                  imageSize: _viewModel.getImageSize(),
                 );
               },
             ),
@@ -286,13 +368,13 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().setModel(
+                context.read<CropImageCubit>().setCropImage(
                   insets: insets.copyWith(
                     right: padding.dx,
                     top: padding.dy,
                   ),
-                  cropSize: _viewModel.cropSize,
-                  imageSize: _viewModel.imageSize,
+                  cropSize: _viewModel.getCropSize(),
+                  imageSize: _viewModel.getImageSize(),
                 );
               },
             ),
@@ -316,13 +398,13 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: -drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().setModel(
+                context.read<CropImageCubit>().setCropImage(
                   insets: insets.copyWith(
                     right: padding.dx,
                     bottom: padding.dy,
                   ),
-                  cropSize: _viewModel.cropSize,
-                  imageSize: _viewModel.imageSize,
+                  cropSize: _viewModel.getCropSize(),
+                  imageSize: _viewModel.getImageSize(),
                 );
               },
             ),
@@ -346,13 +428,13 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
                     dragDy: -drag.delta.dy
                 );
 
-                context.read<CropImageCubit>().setModel(
+                context.read<CropImageCubit>().setCropImage(
                   insets: insets.copyWith(
                     left: padding.dx,
                     bottom: padding.dy,
                   ),
-                  cropSize: _viewModel.cropSize,
-                  imageSize: _viewModel.imageSize,
+                  cropSize: _viewModel.getCropSize(),
+                  imageSize: _viewModel.getImageSize(),
                 );
               },
             ),
@@ -388,15 +470,7 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
   _getRotatePictureButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        _isVertical = !_isVertical;
-        if((_rotateAnimationValue += 0.25) > 1) {
-          _rotateAnimationValue = 0.25;
-          _rotateController.reset();
-        }
-        _rotateController.animateTo(_rotateAnimationValue);
-        context.read<CropImageCubit>().setModel(
-          quarterTurns: context.read<CropImageCubit>().quarterTurns - 1
-        );
+        _rotateImage();
       },
       child: Container(
         width: 40,
@@ -412,13 +486,31 @@ class _ImageCropWidgetState extends State<ImageCropWidget> with TickerProviderSt
     );
   }
 
+  _rotateImage() {
+    _viewModel.quarterTurns++;
+    // _isVertical = !_isVertical;
+    // if((_rotateAnimationValue += 0.25) > 1) {
+    //   _rotateAnimationValue = 0.25;
+    //   _rotateController.reset();
+    // }
+    // _rotateController.animateTo(_rotateAnimationValue);
+
+    final insets = EdgeInsets.all(20);
+
+    context.read<CropImageCubit>().setCropImage(
+        insets: insets,
+        quarterTurns: _viewModel.quarterTurns,
+    );
+  }
+
   //todo addPostFrameCallback으로 image Size 초기화 해주려고했는데 딜레이를 안주니 Size가 0으로 나옴
+  //이미지 사이즈를 미리 가져오는 방법도 있음
   _afterLayout(Duration duration) {
     Future.delayed(Duration(milliseconds: 30)).then((_) {
       final RenderBox cropBox = _viewModel.cropAreaKey.currentContext.findRenderObject();
       final RenderBox imageBox = _viewModel.imageContainerKey.currentContext.findRenderObject();
 
-      context.read<CropImageCubit>().setModel(
+      context.read<CropImageCubit>().setCropImage(
           imageSize: imageBox.size,
           cropSize: cropBox.size
       );

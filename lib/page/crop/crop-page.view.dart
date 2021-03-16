@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:crop_plugin/crop_plugin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_camera_crop/page/crop/cubit/edge-insets-cubit.dart';
+import 'package:flutter_camera_crop/page/crop/cubit/crop-image-cubit.dart';
 import 'package:flutter_camera_crop/page/main/cubit/image-cubit.dart';
 import 'package:flutter_camera_crop/widget/Image-crop-widget.dart';
 
@@ -37,15 +37,15 @@ class CropPageView extends StatelessWidget {
   _getCompleteButton(BuildContext context) {
     return FlatButton(
         onPressed: () async {
-          final model = context.read<CropImageCubit>().value;
+          final cubit = context.read<CropImageCubit>().value;
 
-          print('_getCompleteButton ${model.angle}');
+          print('_getCompleteButton ${cubit.insets} ${cubit.rect} ${cubit.cropSize} ${cubit.imageSize}');
           final cropImageByte = await CropPlugin.cropImage(
-            bytes: model.imageBytes,
-            rawSize: model.imageSize,
-            area: model.rect,
+            bytes: cubit.imageBytes,
+            rawSize: cubit.imageSize,
+            area: cubit.rect,
             scale: 0.1,
-            angle: model.angle,
+            angle: cubit.angle,
           );
           context.read<CameraImageCubit>().imageBytes = cropImageByte;
           Navigator.pop(context);
